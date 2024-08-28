@@ -1,0 +1,133 @@
+services:
+
+### MANDATORY ###
+
+  nginx:
+    build: requirements/nginx/.
+    image: nginx
+    container_name: nginx
+    depends_on:
+      - wordpress
+      - mariadb
+      - adminer
+      - prometheus
+      - static_website
+    ports:
+      - "443:443"
+    volumes:
+      - web:/var/www/html
+    env_file: 
+      - .env
+    restart: always
+    networks:
+      inception:
+  wordpress:
+    env_file:
+      - .env
+    build: requirements/wordpress/.
+    image: wordpress
+    container_name: wordpress
+    depends_on:
+      - mariadb
+      - redis
+    volumes:
+      - web:/var/www/html
+    expose:
+      - "9000"
+    restart: always
+    networks:
+      inception:
+  mariadb:
+    env_file:
+      - .env
+    build: requirements/mariadb/.
+    image: mariadb
+    container_name: mariadb
+    volumes:
+      - database:/var/lib/mysql
+    expose:
+      - "3306"
+    restart: always
+    networks:
+      inception:
+
+### BONUS ###
+
+  redis:
+    env_file:
+      - .env
+    build: requirements/bonus/redis/.
+    image: redis
+    container_name: redis
+    volumes:
+      - web:/var/www/html
+    expose:
+      - "6379"
+    restart: always
+    networks:
+      inception:
+  ftp:
+    env_file:
+      - .env
+    build: requirements/bonus/ftp/.
+    container_name: ftp
+    image: ftp
+    restart: always
+    depends_on:
+      - wordpress
+    ports:
+      - "21:21"
+      - "21000-21010:21000-21010"
+    volumes:
+      - web:/var/www/html
+    networks:
+      inception:
+  static_website:
+    build: requirements/bonus/static_website/.
+    container_name: static_website
+    image: static_website
+    ports:
+      - "8080:8080"
+    volumes:
+      - web:/var/www/html
+    networks:
+      inception:
+  adminer:
+    build: requirements/bonus/adminer/.
+    container_name: adminer
+    image: adminer
+    depends_on:
+      - mariadb
+    restart: always
+    ports:
+      - "8081:8081"
+    networks:
+      inception:
+  prometheus:
+    build: requirements/bonus/prometheus/.
+    container_name: prometheus
+    image: prometheus
+    ports:
+      - "9090:9090"
+    restart: always
+    networks:
+      - inception
+
+
+volumes:
+  database:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/kprigent/data/mysql
+      o: bind
+  web:
+    driver: local
+    driver_opts:
+      type: none
+      device: /home/kprigent/data/wordpress
+      o: bind
+
+networks:
+  inception:
+    driver: bridge
